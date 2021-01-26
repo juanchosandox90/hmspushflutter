@@ -15,17 +15,42 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isNotificationsActive = true;
   bool _subscribed = false;
 
-  String _token = '';
+  static const platform =
+      const MethodChannel('com.sandoval.hmspushflutter/notification');
+
+  String notificationData;
+  String token;
+
   static const EventChannel TokenEventChannel =
       EventChannel(Channel.TOKEN_CHANNEL);
 
   static const EventChannel DataMessageEventChannel =
       EventChannel(Channel.DATA_MESSAGE_CHANNEL);
 
+  Future<dynamic> _handleNotification(MethodCall call) async {
+    switch (call.method) {
+      case "notification":
+        setState(() {
+          notificationData = call.arguments;
+        });
+        break;
+      case "token":
+        setState(() {
+          token = call.arguments;
+        });
+        break;
+    }
+  }
+
+  void _getToken() {
+    platform.invokeMethod("token");
+  }
+
   @override
   void initState() {
     super.initState();
     initPlatformState();
+    platform.setMethodCallHandler(_handleNotification);
     getToken();
   }
 
@@ -40,15 +65,15 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onTokenEvent(Object event) {
     // This function gets called when we receive the token successfully
     setState(() {
-      _token = event;
+      token = event;
     });
-    print('Push Token: ' + _token);
+    print('Push Token: ' + token);
     Push.showToast(event);
   }
 
   void _onTokenError(Object error) {
     setState(() {
-      _token = error;
+      token = error;
     });
     Push.showToast(error);
   }
@@ -145,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 isNotificationsActive = !isNotificationsActive;
                 if (isNotificationsActive) {
                   turnOnPush();
+                  _getToken();
                 } else {
                   turnOffPush();
                 }
